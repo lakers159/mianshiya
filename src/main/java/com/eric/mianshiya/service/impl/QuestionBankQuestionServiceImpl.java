@@ -71,6 +71,8 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
             QuestionBank questionBank = questionBankService.getById(questionBankId);
             ThrowUtils.throwIf(questionBank == null, ErrorCode.NOT_FOUND_ERROR,"题库不存在");
         }
+
+
         //不需要校验
 //        // todo 从对象中取值
 //        String title = questionBankQuestion.getTitle();
