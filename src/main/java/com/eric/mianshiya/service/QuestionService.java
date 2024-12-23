@@ -3,6 +3,7 @@ package com.eric.mianshiya.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.eric.mianshiya.common.BaseResponse;
 import com.eric.mianshiya.model.dto.question.QuestionQueryRequest;
 import com.eric.mianshiya.model.entity.Question;
 import com.eric.mianshiya.model.vo.QuestionVO;
@@ -50,4 +51,13 @@ public interface QuestionService extends IService<Question> {
      * @return
      */
     Page<QuestionVO> getQuestionVOPage(Page<Question> questionPage, HttpServletRequest request);
+
+    /**
+     * 分页获取题目列表（仅管理员可用）
+     *
+     * @param questionQueryRequest
+     * @return
+     */
+    //注意，给管理员返回的字段类型是Question，也就是数据库中的实体类中拥有的所有的字段
+    Page<Question> listQuestionByPage(QuestionQueryRequest questionQueryRequest);
 }

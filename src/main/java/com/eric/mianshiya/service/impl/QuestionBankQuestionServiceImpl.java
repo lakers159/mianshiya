@@ -9,11 +9,15 @@ import com.eric.mianshiya.constant.CommonConstant;
 import com.eric.mianshiya.exception.ThrowUtils;
 import com.eric.mianshiya.mapper.QuestionBankQuestionMapper;
 import com.eric.mianshiya.model.dto.questionBankQuestion.QuestionBankQuestionQueryRequest;
+import com.eric.mianshiya.model.entity.Question;
+import com.eric.mianshiya.model.entity.QuestionBank;
 import com.eric.mianshiya.model.entity.QuestionBankQuestion;
 import com.eric.mianshiya.model.entity.User;
 import com.eric.mianshiya.model.vo.QuestionBankQuestionVO;
 import com.eric.mianshiya.model.vo.UserVO;
 import com.eric.mianshiya.service.QuestionBankQuestionService;
+import com.eric.mianshiya.service.QuestionBankService;
+import com.eric.mianshiya.service.QuestionService;
 import com.eric.mianshiya.service.UserService;
 import com.eric.mianshiya.utils.SqlUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +44,13 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
     @Resource
     private UserService userService;
 
+    @Resource
+    private QuestionService questionService;
+
+    @Resource
+    private QuestionBankService questionBankService;
+
+
     /**
      * 校验数据
      *
@@ -49,6 +60,17 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
     @Override
     public void validQuestionBankQuestion(QuestionBankQuestion questionBankQuestion, boolean add) {
         ThrowUtils.throwIf(questionBankQuestion == null, ErrorCode.PARAMS_ERROR);
+        //对数据进行校验，要求题目和题库必须存在
+        Long questionId = questionBankQuestion.getQuestionId();
+        if(questionId != null){
+            Question question = questionService.getById(questionId);
+            ThrowUtils.throwIf(question == null, ErrorCode.NOT_FOUND_ERROR,"题目不存在");
+        }
+        Long questionBankId = questionBankQuestion.getQuestionBankId();
+        if(questionBankId != null){
+            QuestionBank questionBank = questionBankService.getById(questionBankId);
+            ThrowUtils.throwIf(questionBank == null, ErrorCode.NOT_FOUND_ERROR,"题库不存在");
+        }
         //不需要校验
 //        // todo 从对象中取值
 //        String title = questionBankQuestion.getTitle();
