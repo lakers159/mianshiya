@@ -58,7 +58,7 @@ public class QuestionQueryRequest extends PageRequest implements Serializable {
     private String answer;
 
     /**
-     * 题目id
+     * 题库id
      */
     private Long questionBankId;
 

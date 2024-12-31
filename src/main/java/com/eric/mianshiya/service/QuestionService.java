@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.eric.mianshiya.common.BaseResponse;
+import com.eric.mianshiya.model.dto.post.PostQueryRequest;
 import com.eric.mianshiya.model.dto.question.QuestionQueryRequest;
+import com.eric.mianshiya.model.entity.Post;
 import com.eric.mianshiya.model.entity.Question;
 import com.eric.mianshiya.model.vo.QuestionVO;
 
@@ -60,4 +62,13 @@ public interface QuestionService extends IService<Question> {
      */
     //注意，给管理员返回的字段类型是Question，也就是数据库中的实体类中拥有的所有的字段
     Page<Question> listQuestionByPage(QuestionQueryRequest questionQueryRequest);
+
+
+    /**
+     * 从 ES 查询题目
+     *
+     * @param questionQueryRequest
+     * @return
+     */
+    Page<Question> searchFromEs(QuestionQueryRequest questionQueryRequest);
 }
