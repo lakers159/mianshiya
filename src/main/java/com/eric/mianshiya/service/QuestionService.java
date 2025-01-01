@@ -11,6 +11,7 @@ import com.eric.mianshiya.model.entity.Question;
 import com.eric.mianshiya.model.vo.QuestionVO;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * 题目服务
@@ -71,4 +72,10 @@ public interface QuestionService extends IService<Question> {
      * @return
      */
     Page<Question> searchFromEs(QuestionQueryRequest questionQueryRequest);
+
+    /**
+     * 批量删除题目
+     * @param questionList
+     */
+    void batchDeleteQuestions(List<Long> questionList);
 }

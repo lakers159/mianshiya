@@ -14,9 +14,12 @@ import com.eric.mianshiya.model.dto.question.QuestionAddRequest;
 import com.eric.mianshiya.model.dto.question.QuestionEditRequest;
 import com.eric.mianshiya.model.dto.question.QuestionQueryRequest;
 import com.eric.mianshiya.model.dto.question.QuestionUpdateRequest;
+import com.eric.mianshiya.model.dto.questionBankQuestion.QuestionBankQuestionBatchAddRequest;
+import com.eric.mianshiya.model.dto.questionBankQuestion.QuestionBankQuestionBatchRemoveRequest;
 import com.eric.mianshiya.model.entity.Question;
 import com.eric.mianshiya.model.entity.User;
 import com.eric.mianshiya.model.vo.QuestionVO;
+import com.eric.mianshiya.service.QuestionBankQuestionService;
 import com.eric.mianshiya.service.QuestionService;
 import com.eric.mianshiya.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +46,9 @@ public class QuestionController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private QuestionBankQuestionService questionBankQuestionService;
 
     // region 增删改查
 
@@ -253,6 +259,46 @@ public class QuestionController {
         Page<Question> questionPage = questionService.searchFromEs(questionQueryRequest);
         return ResultUtils.success(questionService.getQuestionVOPage(questionPage, request));
     }
+
+    /**
+     * 批量添加题目到题库
+     * @param questionBankQuestionBatchAddRequest
+     * @param request
+     */
+    @PostMapping("/add/batch")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> batchAddQuestionsToBank(
+            @RequestBody QuestionBankQuestionBatchAddRequest questionBankQuestionBatchAddRequest,
+            HttpServletRequest request
+    ) {
+        // 参数校验
+        ThrowUtils.throwIf(questionBankQuestionBatchAddRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        Long questionBankId = questionBankQuestionBatchAddRequest.getQuestionBankId();
+        List<Long> questionIdList = questionBankQuestionBatchAddRequest.getQuestionIdList();
+        questionBankQuestionService.batchAddQuestionsToBank(questionIdList, questionBankId, loginUser);
+        return ResultUtils.success(true);
+    }
+
+    /**
+     * 批量移除题目到题库
+     * @param questionBankQuestionBatchRemoveRequest
+     * @param request
+     */
+    @PostMapping("/remove/batch")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> batchRemoveQuestionsFromBank(
+            @RequestBody QuestionBankQuestionBatchRemoveRequest questionBankQuestionBatchRemoveRequest,
+            HttpServletRequest request
+    ) {
+        // 参数校验
+        ThrowUtils.throwIf(questionBankQuestionBatchRemoveRequest == null, ErrorCode.PARAMS_ERROR);
+        Long questionBankId = questionBankQuestionBatchRemoveRequest.getQuestionBankId();
+        List<Long> questionIdList = questionBankQuestionBatchRemoveRequest.getQuestionIdList();
+        questionBankQuestionService.batchRemoveQuestionsFromBank(questionIdList, questionBankId);
+        return ResultUtils.success(true);
+    }
+
 
 
     // endregion
