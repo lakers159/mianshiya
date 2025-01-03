@@ -21,6 +21,7 @@ import com.eric.mianshiya.model.vo.QuestionBankVO;
 import com.eric.mianshiya.service.QuestionBankService;
 import com.eric.mianshiya.service.QuestionService;
 import com.eric.mianshiya.service.UserService;
+import com.jd.platform.hotkey.client.callback.JdHotKeyStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
@@ -144,7 +145,21 @@ public class QuestionBankController {
         Long id = questionBankQueryRequest.getId();
         boolean needQueryQuestionList = questionBankQueryRequest.isNeedQueryQuestionList();
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
-        // 查询数据库
+
+        //缓存逻辑
+        //生成key
+        String key="bank_detail_"+id;
+        //如果是热key
+        if(JdHotKeyStore.isHotKey(key)){
+            //从本地缓存中获取缓存值
+            Object cachedQuestionBankVO = JdHotKeyStore.get(key);
+            if(cachedQuestionBankVO!=null){
+                //此时说明缓存中已经有对应的值,直接将缓存中的值进行返回
+                return ResultUtils.success((QuestionBankVO) cachedQuestionBankVO);
+            }
+        }
+
+        // 查询数据库(此时说明缓存中没有值)
         QuestionBank questionBank = questionBankService.getById(id);
         ThrowUtils.throwIf(questionBank == null, ErrorCode.NOT_FOUND_ERROR);
         //查询题库封装类
@@ -156,6 +171,10 @@ public class QuestionBankController {
             Page<Question> questionPage = questionService.listQuestionByPage(questionQueryRequest);
             questionBankVO.setQuestionPage(questionPage);
         }
+
+        //设置本地缓存（如果不是热key，这个方法不会设置缓存，换句话说，需要已经识别为热key的数据，才可以加入缓存，进而实现实时监控热点的功能）
+        JdHotKeyStore.smartSet(key,questionBankVO);
+
         // 获取封装类
         return ResultUtils.success(questionBankVO);
     }
