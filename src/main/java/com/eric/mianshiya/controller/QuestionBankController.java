@@ -1,5 +1,8 @@
 package com.eric.mianshiya.controller;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
+import com.alibaba.csp.sentinel.slots.block.degrade.DegradeException;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.eric.mianshiya.annotation.AuthCheck;
 import com.eric.mianshiya.common.BaseResponse;
@@ -140,20 +143,20 @@ public class QuestionBankController {
      * @return
      */
     @GetMapping("/get/vo")
-    public BaseResponse<QuestionBankVO> getQuestionBankVOById(QuestionBankQueryRequest questionBankQueryRequest, HttpServletRequest request)  {
-        ThrowUtils.throwIf(questionBankQueryRequest==null,ErrorCode.PARAMS_ERROR);
+    public BaseResponse<QuestionBankVO> getQuestionBankVOById(QuestionBankQueryRequest questionBankQueryRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(questionBankQueryRequest == null, ErrorCode.PARAMS_ERROR);
         Long id = questionBankQueryRequest.getId();
         boolean needQueryQuestionList = questionBankQueryRequest.isNeedQueryQuestionList();
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
 
         //缓存逻辑
         //生成key
-        String key="bank_detail_"+id;
+        String key = "bank_detail_" + id;
         //如果是热key
-        if(JdHotKeyStore.isHotKey(key)){
+        if (JdHotKeyStore.isHotKey(key)) {
             //从本地缓存中获取缓存值
             Object cachedQuestionBankVO = JdHotKeyStore.get(key);
-            if(cachedQuestionBankVO!=null){
+            if (cachedQuestionBankVO != null) {
                 //此时说明缓存中已经有对应的值,直接将缓存中的值进行返回
                 return ResultUtils.success((QuestionBankVO) cachedQuestionBankVO);
             }
@@ -165,7 +168,7 @@ public class QuestionBankController {
         //查询题库封装类
         QuestionBankVO questionBankVO = questionBankService.getQuestionBankVO(questionBank, request);
         //是否要关联查询题库下的题目列表
-        if(needQueryQuestionList){
+        if (needQueryQuestionList) {
             QuestionQueryRequest questionQueryRequest = new QuestionQueryRequest();
             questionQueryRequest.setQuestionBankId(id);
             Page<Question> questionPage = questionService.listQuestionByPage(questionQueryRequest);
@@ -173,7 +176,7 @@ public class QuestionBankController {
         }
 
         //设置本地缓存（如果不是热key，这个方法不会设置缓存，换句话说，需要已经识别为热key的数据，才可以加入缓存，进而实现实时监控热点的功能）
-        JdHotKeyStore.smartSet(key,questionBankVO);
+        JdHotKeyStore.smartSet(key, questionBankVO);
 
         // 获取封装类
         return ResultUtils.success(questionBankVO);
@@ -204,8 +207,11 @@ public class QuestionBankController {
      * @return
      */
     @PostMapping("/list/page/vo")
+    @SentinelResource(value = "listQuestionBankVOByPage",
+            blockHandler = "handleBlockException",
+            fallback = "handleFallback")
     public BaseResponse<Page<QuestionBankVO>> listQuestionBankVOByPage(@RequestBody QuestionBankQueryRequest questionBankQueryRequest,
-                                                               HttpServletRequest request) {
+                                                                       HttpServletRequest request) {
         long current = questionBankQueryRequest.getCurrent();
         long size = questionBankQueryRequest.getPageSize();
         // 限制爬虫
@@ -218,6 +224,29 @@ public class QuestionBankController {
     }
 
     /**
+     * listQuestionBankVOByPage 流控操作
+     * 限流：提示“系统压力过大，请耐心等待”
+     */
+    public BaseResponse<Page<QuestionBankVO>> handleBlockException(@RequestBody QuestionBankQueryRequest questionBankQueryRequest,
+                                                                   HttpServletRequest request, BlockException ex) {
+        if (ex instanceof DegradeException) {
+            return handleFallback(questionBankQueryRequest, request, ex);
+        }
+        // 限流操作
+        return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "系统压力过大，请耐心等待");
+    }
+
+    /**
+     * listQuestionBankVOByPage 降级操作：直接返回本地数据
+     */
+    public BaseResponse<Page<QuestionBankVO>> handleFallback(@RequestBody QuestionBankQueryRequest questionBankQueryRequest,
+                                                             HttpServletRequest request, Throwable ex) {
+        // 可以返回本地数据或空数据
+        return ResultUtils.success(null);
+    }
+
+
+    /**
      * 分页获取当前登录用户创建的题库列表
      *
      * @param questionBankQueryRequest
@@ -226,7 +255,7 @@ public class QuestionBankController {
      */
     @PostMapping("/my/list/page/vo")
     public BaseResponse<Page<QuestionBankVO>> listMyQuestionBankVOByPage(@RequestBody QuestionBankQueryRequest questionBankQueryRequest,
-                                                                 HttpServletRequest request) {
+                                                                         HttpServletRequest request) {
         ThrowUtils.throwIf(questionBankQueryRequest == null, ErrorCode.PARAMS_ERROR);
         // 补充查询条件，只查询当前登录用户的数据
         User loginUser = userService.getLoginUser(request);
