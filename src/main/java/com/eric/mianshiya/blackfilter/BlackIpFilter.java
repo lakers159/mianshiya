@@ -14,7 +14,7 @@ public class BlackIpFilter implements Filter {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
 
         String ipAddress = NetUtils.getIpAddress((HttpServletRequest) servletRequest);
-        if (BlackIpUtils.isBlackIp(ipAddress)) {
+         if (BlackIpUtils.isBlackIp(ipAddress)) {
             servletResponse.setContentType("text/json;charset=UTF-8");
             servletResponse.getWriter().write("{\"errorCode\":\"-1\",\"errorMsg\":\"黑名单IP，禁止访问\"}");
             return;

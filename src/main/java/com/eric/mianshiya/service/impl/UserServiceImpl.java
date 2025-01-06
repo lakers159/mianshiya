@@ -2,6 +2,7 @@ package com.eric.mianshiya.service.impl;
 
 import static com.eric.mianshiya.constant.UserConstant.USER_LOGIN_STATE;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -10,10 +11,12 @@ import com.eric.mianshiya.constant.CommonConstant;
 import com.eric.mianshiya.constant.RedisConstant;
 import com.eric.mianshiya.mapper.UserMapper;
 import com.eric.mianshiya.model.dto.user.UserQueryRequest;
+import com.eric.mianshiya.model.entity.Question;
 import com.eric.mianshiya.model.entity.User;
 import com.eric.mianshiya.model.enums.UserRoleEnum;
 import com.eric.mianshiya.model.vo.LoginUserVO;
 import com.eric.mianshiya.model.vo.UserVO;
+import com.eric.mianshiya.satoken.DeviceUtils;
 import com.eric.mianshiya.service.UserService;
 import com.eric.mianshiya.utils.SqlUtils;
 import com.eric.mianshiya.exception.BusinessException;
@@ -113,7 +116,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
         }
         // 3. 记录用户的登录态
-        request.getSession().setAttribute(USER_LOGIN_STATE, user);
+//        request.getSession().setAttribute(USER_LOGIN_STATE, user);
+
+        //使用sa-token登录，并指定设备，用来实现同端登录互斥
+        StpUtil.login(user.getId(), DeviceUtils.getRequestDevice(request));
+        StpUtil.getSession().set(USER_LOGIN_STATE, user);
+
         return this.getLoginUserVO(user);
     }
 
@@ -158,14 +166,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public User getLoginUser(HttpServletRequest request) {
         // 先判断是否已登录
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User currentUser = (User) userObj;
-        if (currentUser == null || currentUser.getId() == null) {
+        Object loginUserId = StpUtil.getLoginIdDefaultNull();
+        if (loginUserId == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
+
+//        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+//        User currentUser = (User) userObj;
+//        if (currentUser == null || currentUser.getId() == null) {
+//            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+//        }
         // 从数据库查询（追求性能的话可以注释，直接走缓存）
-        long userId = currentUser.getId();
-        currentUser = this.getById(userId);
+//        long userId = currentUser.getId();
+        User currentUser = this.getById((String)loginUserId);
         if (currentUser == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
@@ -217,11 +230,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public boolean userLogout(HttpServletRequest request) {
-        if (request.getSession().getAttribute(USER_LOGIN_STATE) == null) {
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "未登录");
-        }
+//        if (request.getSession().getAttribute(USER_LOGIN_STATE) == null) {
+//            throw new BusinessException(ErrorCode.OPERATION_ERROR, "未登录");
+//        }
+        StpUtil.checkLogin();
         // 移除登录态
-        request.getSession().removeAttribute(USER_LOGIN_STATE);
+        StpUtil.logout();
+//        request.getSession().removeAttribute(USER_LOGIN_STATE);
         return true;
     }
 
@@ -293,7 +308,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         int offset = date.getDayOfYear();
         if (!signInBitSet.get(offset)) {
             //此时表示Redis中没有这条数据，说明还没有签到，那么就将这条数据添加到Redis中，表示已经签到
-            boolean result=signInBitSet.set(offset,true);
+            boolean result = signInBitSet.set(offset, true);
             return result;
         }
         //返回当天已经签到
@@ -326,10 +341,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         ArrayList<Integer> dayList = new ArrayList<>();
         //从索引0开始查找下一个被置为1的位
         int index = bitSet.nextSetBit(0);
-        while(index>=0){
+        while (index >= 0) {
             dayList.add(index);
             //查找下一个被设置为1的位，由于nextSetBit方法查找的时候是包括参数自身的，如果不手动加一，就会无限循环
-            index=bitSet.nextSetBit(index+1);
+            index = bitSet.nextSetBit(index + 1);
         }
         return dayList;
     }
